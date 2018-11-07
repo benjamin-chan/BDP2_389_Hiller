@@ -23,22 +23,26 @@ sessionInfo()
 ```
 
 Define study design and simulation parameters.
+Set random number seed.
 
 ```{r}
 M <-    6  # Number of waves
 N <-    4  # Size in each wave
-S <- 1000  # Number of simulations
+S <- 5000  # Number of simulations
 design <-
   expand.grid(sim = seq(1, S),
               intervention = c("Control", "MBSR1", "MBSR2"),
               wave = seq(1, M)) %>%
   arrange(sim, intervention, wave)
+"2018-11-05" %>% as.Date %>% as.numeric %>% set.seed()
 ```
 
 Define effect sizes, standard deviations, and within-cluster intraclass correlation.
+`V1` is the covariance matrix for within subject covariance (dimension 2, baseline to post-intervention).
+`V2` is the covariance matrix for within wave covariance (dimension `r N`, number of subjects in each wave in each intervention arm).
 
 ```{r}
-effsize <- c(0, 0.7, 0.82)
+effsize <- c(0, 0.80, 0.94)
 sigma   <- rep(1, 3)
 iccWithinSubject <- 0.5
 iccWithinWave <- 0.1
@@ -142,7 +146,7 @@ ggsave("../figures/simCorrData.png", width = 5)
 Simulate power.
 
 ```{r}
-cores <- min(4, detectCores() - 1)
+cores <- min(4, detectCores())
 cl <- makeCluster(cores)
 registerDoParallel(cl)
 simResults <- foreach (i = seq(1, S), .combine = rbind) %dopar% {
@@ -153,12 +157,13 @@ simResults <- foreach (i = seq(1, S), .combine = rbind) %dopar% {
   simModel(i)
 }
 stopCluster(cl)
-simResults %>%
+powerTable <- 
+  simResults %>%
   group_by(term) %>%
   summarize(nReject = sum(rejectNull),
             nSim = n(),
-            meanEffSize = mean(estimate),
-            sdEffSize = sd(estimate),
+            meanBeta = mean(estimate),
+            sdBeta = sd(estimate),
             meanStdBeta = mean(stdEstimate)) %>%
   mutate(power = nReject / nSim) %>%
   mutate(nominalEffSize = c(effsize[2:3], NA),
@@ -166,20 +171,48 @@ simResults %>%
          iccWithinSubject = iccWithinSubject,
          iccWithinWave = iccWithinWave,
          groupSize = M * N) %>%
-  select(term, nominalEffSize, sigma, meanEffSize, sdEffSize, meanStdBeta, iccWithinSubject, iccWithinWave, groupSize, nReject, nSim, power) %>%
-  kable(digits = c(0, rep(3, 7), rep(0, 3), 3))
+  select(term, nominalEffSize, sigma, meanBeta, sdBeta, meanStdBeta, iccWithinSubject, iccWithinWave, groupSize, nReject, nSim, power)
 G <- 
   simResults %>%
-  filter(grepl("intervention", term)) %>%
   gather(variable, value, estimate, stdEstimate) %>%
   ggplot(aes(x = value)) +
+  ggtitle("Distribution of fixed effects") +
   geom_density(aes(fill = term), alpha = 1/2) +
   facet_grid(term ~ variable, scale = "free_y") +
   scale_fill_brewer("Model term", palette = "Set1") +
   theme_bw() +
   theme(legend.position = "none",
-        panel.grid.minor = element_blank())
-ggsave("../figures/simModelEstimateDensity.png", height = 4)
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+ggsave("../figures/simModelEstimateDensity.png", height = 6)
 ```
 
 ![figures/simModelEstimateDensity.png](figures/simModelEstimateDensity.png)
+
+
+# Summary
+
+The outcome is the post-intervention PSS score, assumed to be normally distributed.
+The model is a random intercept model with subjects nested within wave.
+The model adjusts for baseline PSS score.
+
+$$
+y_\text{post} = \beta_{0j} + \beta_1 x_\text{MBSR1} + \beta_2 x_\text{MBSR2} + \beta_3 y_\text{baseline}
+$$
+
+where $j = 1, \ldots, 6$ is the index for wave.
+The random intercept accounts for the potential for correlation between subjects within wave.
+For example, if the overall economy is good or bad at a particular calendar time, then all subjects recruited before that wave might have correlated stress levels.
+The amount of correlation between subjects within wave is the intraclass correlation set by `iccWithinWave`, `r sprintf("%.02f", iccWithinWave)`.
+
+Correlation is also assumed between a subject's baseline and post-intervention stress level.
+For example, a person who doesn't get stressed is likely to not be under stress at both time points.
+The amount of correlation between time points within subject is the intraclass correlation set by `iccWithinSubject`, `r sprintf("%.02f", iccWithinSubject)`.
+
+Power simulations assume a study design with `r M` waves and `r N` subjects in randomized to each intervention arm in each wave.
+Simulations results are based on `r S` simulated data sets.
+
+```{r}
+powerTable %>% kable(digits = c(0, rep(3, 7), rep(0, 3), 3))
+powerTable %>% write.csv(file = "../data/processed/powerTable.csv", row.names = FALSE)
+```
