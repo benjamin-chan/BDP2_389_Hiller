@@ -6,189 +6,9 @@ author: Benjamin Chan (chanb@ohsu.edu)
 date: "`r Sys.time()`"
 ---
 
-Load packages.
-
-```{r, messages = FALSE, warnings = FALSE}
-library(knitr)
-library(magrittr)
-library(tidyr)
-library(dplyr)
-library(simstudy)
-library(lme4)
-library(broom)
-library(ggplot2)
-library(parallel)
-library(doParallel)
-sessionInfo()
+```{r, results = FALSE, message = FALSE, warning = FALSE}
+source("simulatePower.R")
 ```
-
-Define study design and simulation parameters.
-Set random number seed.
-
-```{r}
-M <-    6  # Number of waves
-N <-    4  # Size in each wave
-S <- 5000  # Number of simulations
-design <-
-  expand.grid(sim = seq(1, S),
-              intervention = c("Control", "MBSR1", "MBSR2"),
-              wave = seq(1, M)) %>%
-  arrange(sim, intervention, wave)
-"2018-11-05" %>% as.Date %>% as.numeric %>% set.seed()
-```
-
-Define effect sizes, standard deviations, and within-cluster intraclass correlation.
-`V1` is the covariance matrix for within subject covariance (dimension 2, baseline to post-intervention).
-`V2` is the covariance matrix for within wave covariance (dimension `r N`, number of subjects in each wave in each intervention arm).
-
-```{r}
-effsize <- c(0, 0.80, 0.94)
-sigma   <- rep(1, 3)
-iccWithinSubject <- 0.5
-iccWithinWave <- 0.1
-V1 <- matrix(c(1, iccWithinSubject^2, iccWithinSubject^2, 1), nrow = 2, ncol = 2)
-V2 <- diag(N)
-V2[lower.tri(V2)] <- iccWithinWave^2
-V2[upper.tri(V2)] <- iccWithinWave^2
-V <- kronecker(V1, V2)
-V
-```
-
-Define simulation functions.
-
-```{r}
-simCorrData <- function (group, es, s, data = design) {
-  require(magrittr)
-  require(tidyr)
-  require(simstudy)
-  bind_cols(data %>%
-              filter(intervention == group) %>%
-              select(sim, intervention),
-            genCorData(M * S, 
-                       mu = c(rep(0, N), rep(es, N)), 
-                       sigma = s, 
-                       corMatrix = V,
-                       idname = "wave")) %>%
-    gather(key, y, -sim, -intervention, -wave) %>%
-    mutate(key = as.numeric(gsub("V", "", key))) %>%
-    mutate(id = (key - 1) %% N + 1) %>%
-    mutate(rep = sprintf("y%d", floor((key - 1) / N))) %>%
-    arrange(sim, intervention, wave, id, rep) %>%
-    select(-key) %>%
-    spread(rep, y) %>%
-    mutate(wave = (wave - 1) %% M + 1)
-}
-simModel <- function (i, data = df) {
-  require(magrittr)
-  require(dplyr)
-  require(broom)
-  require(lme4)
-  fit <- 
-    data %>%
-    filter(sim == i) %>%
-    lmer(y1 ~ intervention + y0 + (1 | wave), data = .)
-  beta <-
-    tidy(fit, effects = "fixed") %>%
-      filter(!grepl("Intercept", .$term)) %>%
-      mutate(stdEstimate = estimate / std.error) %>%
-      mutate(rejectNull = abs(statistic) > qt(0.975, summary(fit)$devcomp$dims["n"] - 1))
-  data.frame(sim = i,
-             beta)
-}
-```
-
-Simulate data and plot to check.
-
-```{r}
-df <- bind_rows(simCorrData("Control", effsize[1], sigma[1]),
-                simCorrData("MBSR1"  , effsize[2], sigma[2]),
-                simCorrData("MBSR2"  , effsize[3], sigma[3]))
-df %>%
-  group_by(intervention) %>%
-  summarize(meanBaseline = mean(y0),
-            sdBaseline = sd(y0),
-            medianBaseline = median(y0),
-            minBaseline = min(y0),
-            maxBaseline = max(y0)) %>%
-  kable(digits = 2)
-G <- 
-  df %>%
-  gather(rep, value, y0, y1) %>%
-  ggplot(aes(x = value)) +
-  ggtitle("Distributions of simulated data") +
-  geom_density(aes(fill = intervention), alpha = 1/2) +
-  scale_fill_brewer("Intervention group", palette = "Set1") +
-  facet_grid(rep ~ intervention) +
-  theme_bw() +
-  theme(legend.position = "none",
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simDataDensities.png", height = 3)
-cor(df %>% select(y0, y1)) %>% kable(digits = 4)
-G <-
-  df %>%
-  filter(sim <= 10) %>%
-  mutate(wave = sprintf("Wave %d", wave)) %>%
-  ggplot(aes(x = y0, y = y1)) +
-  ggtitle("10 simulated data sets") +
-  geom_smooth(method = "lm", se = FALSE) +
-  geom_point(alpha = 1/4) +
-  facet_grid(wave ~ intervention) +
-  theme_bw() +
-  theme(panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simCorrData.png", width = 5)
-```
-
-![figures/simDataDensities.png](figures/simDataDensities.png)
-![figures/simCorrData.png](figures/simCorrData.png)
-
-Simulate power.
-
-```{r}
-cores <- min(4, detectCores())
-cl <- makeCluster(cores)
-registerDoParallel(cl)
-simResults <- foreach (i = seq(1, S), .combine = rbind) %dopar% {
-  require(magrittr)
-  require(dplyr)
-  require(broom)
-  require(lme4)
-  simModel(i)
-}
-stopCluster(cl)
-powerTable <- 
-  simResults %>%
-  group_by(term) %>%
-  summarize(nReject = sum(rejectNull),
-            nSim = n(),
-            meanBeta = mean(estimate),
-            sdBeta = sd(estimate),
-            meanStdBeta = mean(stdEstimate)) %>%
-  mutate(power = nReject / nSim) %>%
-  mutate(nominalEffSize = c(effsize[2:3], NA),
-         sigma = c(sigma[2:3], NA),
-         iccWithinSubject = iccWithinSubject,
-         iccWithinWave = iccWithinWave,
-         groupSize = M * N) %>%
-  select(term, nominalEffSize, sigma, meanBeta, sdBeta, meanStdBeta, iccWithinSubject, iccWithinWave, groupSize, nReject, nSim, power)
-G <- 
-  simResults %>%
-  gather(variable, value, estimate, stdEstimate) %>%
-  ggplot(aes(x = value)) +
-  ggtitle("Distribution of fixed effects") +
-  geom_density(aes(fill = term), alpha = 1/2) +
-  facet_grid(term ~ variable, scale = "free_y") +
-  scale_fill_brewer("Model term", palette = "Set1") +
-  theme_bw() +
-  theme(legend.position = "none",
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simModelEstimateDensity.png", height = 6)
-```
-
-![figures/simModelEstimateDensity.png](figures/simModelEstimateDensity.png)
-
 
 # Summary
 
@@ -203,16 +23,130 @@ $$
 where $j = 1, \ldots, 6$ is the index for wave.
 The random intercept accounts for the potential for correlation between subjects within wave.
 For example, if the overall economy is good or bad at a particular calendar time, then all subjects recruited before that wave might have correlated stress levels.
-The amount of correlation between subjects within wave is the intraclass correlation set by `iccWithinWave`, `r sprintf("%.02f", iccWithinWave)`.
+The amount of correlation between subjects within wave is the intraclass correlation set by `iccWithinWave`, `r sprintf("%.00f%%", iccWithinWave * 100)`.
 
 Correlation is also assumed between a subject's baseline and post-intervention stress level.
 For example, a person who doesn't get stressed is likely to not be under stress at both time points.
-The amount of correlation between time points within subject is the intraclass correlation set by `iccWithinSubject`, `r sprintf("%.02f", iccWithinSubject)`.
+The amount of correlation between time points within subject is the intraclass correlation set by `iccWithinSubject`, `r sprintf("%.00f%%", iccWithinSubject * 100)`.
+
+**Are these correlations reasonable?**
 
 Power simulations assume a study design with `r M` waves and `r N` subjects in randomized to each intervention arm in each wave.
 Simulations results are based on `r S` simulated data sets.
 
 ```{r}
-powerTable %>% kable(digits = c(0, rep(3, 7), rep(0, 3), 3))
-powerTable %>% write.csv(file = "../data/processed/powerTable.csv", row.names = FALSE)
+power %>% kable(digits = c(0, rep(3, 7), rep(0, 3), 3))
+```
+
+With a total of `r M * N` subjects in each intervention arm 
+(`r M * N * design %>% pull(intervention) %>% unique() %>% length()` subjects in total), 
+and a within subject correlation of `r sprintf("%.00f%%", iccWithinSubject * 100)` 
+and a within wave correlation of `r sprintf("%.00f%%", iccWithinWave * 100)`, 
+there is
+
+* `r sprintf("%.03g%%", power %>% filter(term == "MBSR1") %>% pull(power) * 100)` 
+  power to detect an effect size of 
+  `r sprintf("%.03g", power %>% filter(term == "MBSR1") %>% pull(nominalEffSize))`
+* `r sprintf("%.03g%%", power %>% filter(term == "MBSR2") %>% pull(power) * 100)` 
+  power to detect a standardized effect size of 
+  `r sprintf("%.03g", power %>% filter(term == "MBSR2") %>% pull(nominalEffSize))`
+
+# Details
+
+`V1` is the covariance matrix for within subject covariance (dimension 2, baseline to post-intervention).
+`V2` is the covariance matrix for within wave covariance (dimension `r N`, number of subjects in each wave in each intervention arm).
+
+```{r}
+V1
+V2
+V
+```
+
+Check simulation data.
+Make sure it meets expectation.
+
+```{r}
+df %>%
+  group_by(intervention) %>%
+  summarize(meanBaseline = mean(y0),
+            sdBaseline = sd(y0),
+            medianBaseline = median(y0),
+            minBaseline = min(y0),
+            maxBaseline = max(y0)) %>%
+  kable(digits = 2)
+cor(df %>% select(y0, y1)) %>% kable(digits = 4)
+```
+
+```{r, results = FALSE, message = FALSE, warning = FALSE}
+G <- 
+  df %>%
+  gather(rep, value, y0, y1) %>%
+  ggplot(aes(x = value)) +
+  ggtitle("Distributions of simulated data") +
+  geom_density(aes(fill = intervention), alpha = 1/2) +
+  scale_fill_brewer("Intervention group", palette = "Set1") +
+  facet_grid(rep ~ intervention) +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+ggsave("../figures/simDataDensities.png", height = 3)
+G <-
+  df %>%
+  filter(sim <= 10) %>%
+  mutate(wave = sprintf("Wave %d", wave)) %>%
+  ggplot(aes(x = y0, y = y1)) +
+  ggtitle("10 simulated data sets") +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_point(alpha = 1/4) +
+  geom_rug(alpha = 1/4, sides = "l") +
+  facet_grid(wave ~ intervention) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+ggsave("../figures/simCorrData.png", width = 5)
+```
+
+![figures/simDataDensities.png](figures/simDataDensities.png)
+![figures/simCorrData.png](figures/simCorrData.png)
+
+Check model simulation output.
+
+```{r, results = FALSE, message = FALSE, warning = FALSE}
+G <- 
+  simResults %>%
+  filter(group == "fixed") %>%
+  gather(variable, value, estimate, stdEstimate) %>%
+  ggplot(aes(x = value)) +
+  ggtitle("Distribution of fixed effects") +
+  geom_density(aes(fill = term), alpha = 1/2) +
+  facet_grid(term ~ variable, scale = "free") +
+  scale_fill_brewer("Model term", palette = "Set1") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+ggsave("../figures/simModelEstimateDensity.png", height = 6)
+G <- 
+  simResults %>%
+  filter(group == "wave") %>%
+  gather(variable, value, estimate) %>%
+  ggplot(aes(x = value)) +
+  ggtitle("Distribution of random intercept") +
+  geom_density(aes(fill = term), alpha = 1/2) +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+ggsave("../figures/simRandomEffectsDensity.png", width = 4, height = 3)
+```
+
+![figures/simModelEstimateDensity.png](figures/simModelEstimateDensity.png)
+![figures/simRandomEffectsDensity.png](figures/simRandomEffectsDensity.png)
+
+
+R session information.
+
+```{r}
+sessionInfo()
 ```
