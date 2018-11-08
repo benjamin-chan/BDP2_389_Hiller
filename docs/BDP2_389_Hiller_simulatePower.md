@@ -3,7 +3,7 @@ title: |
   | BDP2-389 Hiller
   | Power and sample size simulation
 author: Benjamin Chan (chanb@ohsu.edu)
-date: "2018-11-07 17:31:37"
+date: "2018-11-07 21:04:47"
 ---
 
 
@@ -37,16 +37,16 @@ Simulations results are based on 5000 simulated data sets.
 
 
 ```r
-power %>% kable(digits = c(0, rep(3, 7), rep(0, 3), 3))
+power %>% kable(digits = c(0, rep(3, 6), rep(0, 3), 3))
 ```
 
 
 
-|term      | nominalEffSize| sigma| meanBeta| sdBeta| meanStdBeta| iccWithinSubject| iccWithinWave| groupSize| nReject| nSim| power|
-|:---------|--------------:|-----:|--------:|------:|-----------:|----------------:|-------------:|---------:|-------:|----:|-----:|
-|MBSR1     |           0.77|     1|    0.773|  0.287|       2.989|              0.4|          0.05|        24|    4034| 5000| 0.807|
-|MBSR2     |           0.91|     1|    0.904|  0.285|       3.497|              0.4|          0.05|        24|    4530| 5000| 0.906|
-|yBaseline |             NA|    NA|    0.400|  0.114|       3.689|              0.4|          0.05|        24|    4669| 5000| 0.934|
+|term      | nominalEffSize| sigma| meanBeta| sdBeta| iccWithinSubject| iccWithinWave| groupSize| nReject| nSim| power|
+|:---------|--------------:|-----:|--------:|------:|----------------:|-------------:|---------:|-------:|----:|-----:|
+|MBSR1     |           0.77|     1|    0.773|  0.287|              0.4|          0.05|        24|    4034| 5000| 0.807|
+|MBSR2     |           0.91|     1|    0.904|  0.285|              0.4|          0.05|        24|    4530| 5000| 0.906|
+|yBaseline |             NA|    NA|    0.400|  0.114|              0.4|          0.05|        24|    4669| 5000| 0.934|
 
 With a total of 24 subjects in each intervention arm 
 (72 subjects in total), 
@@ -162,7 +162,7 @@ G <-
   ggtitle("10 simulated data sets") +
   geom_smooth(method = "lm", se = FALSE) +
   geom_point(alpha = 1/4) +
-  geom_rug(alpha = 1/4, sides = "l") +
+  geom_rug(alpha = 1/4) +
   facet_grid(wave ~ intervention) +
   theme_bw() +
   theme(panel.grid.minor = element_blank(),
@@ -180,17 +180,17 @@ Check model simulation output.
 G <- 
   simResults %>%
   filter(group == "fixed") %>%
-  gather(variable, value, estimate, stdEstimate) %>%
+  gather(variable, value, estimate) %>%
   ggplot(aes(x = value)) +
   ggtitle("Distribution of fixed effects") +
   geom_density(aes(fill = term), alpha = 1/2) +
-  facet_grid(term ~ variable, scale = "free") +
+  facet_wrap(~ term, scale = "free_y", ncol = 1) +
   scale_fill_brewer("Model term", palette = "Set1") +
   theme_bw() +
   theme(legend.position = "none",
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simModelEstimateDensity.png", height = 6)
+ggsave("../figures/simModelEstimateDensity.png", width = 4, height = 6)
 G <- 
   simResults %>%
   filter(group == "wave") %>%
