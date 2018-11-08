@@ -74,7 +74,6 @@ simModel <- function (i, data = df) {
                               term == "y0" ~ "yBaseline",
                               grepl("wave", term) ~ "randomIntercept",
                               TRUE ~ NA_character_)) %>%
-      mutate(stdEstimate = estimate / std.error) %>%
       mutate(rejectNull = abs(statistic) > qt(0.975, summary(fit)$devcomp$dims["n"] - 1))
   data.frame(sim = i, 
              beta)
@@ -105,15 +104,14 @@ power <-
   summarize(nReject = sum(rejectNull),
             nSim = n(),
             meanBeta = mean(estimate),
-            sdBeta = sd(estimate),
-            meanStdBeta = mean(stdEstimate)) %>%
+            sdBeta = sd(estimate)) %>%
   mutate(power = nReject / nSim) %>%
   mutate(nominalEffSize = c(effsize[2:3], NA),
          sigma = c(sigma[2:3], NA),
          iccWithinSubject = iccWithinSubject,
          iccWithinWave = iccWithinWave,
          groupSize = M * N) %>%
-  select(term, nominalEffSize, sigma, meanBeta, sdBeta, meanStdBeta, iccWithinSubject, iccWithinWave, groupSize, nReject, nSim, power)
+  select(term, nominalEffSize, sigma, meanBeta, sdBeta, iccWithinSubject, iccWithinWave, groupSize, nReject, nSim, power)
 
 # Save model object for further evaluation.
 fit <- 

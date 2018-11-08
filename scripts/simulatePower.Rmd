@@ -35,7 +35,7 @@ Power simulations assume a study design with `r M` waves and `r N` subjects in r
 Simulations results are based on `r S` simulated data sets.
 
 ```{r}
-power %>% kable(digits = c(0, rep(3, 7), rep(0, 3), 3))
+power %>% kable(digits = c(0, rep(3, 6), rep(0, 3), 3))
 ```
 
 With a total of `r M * N` subjects in each intervention arm 
@@ -99,7 +99,7 @@ G <-
   ggtitle("10 simulated data sets") +
   geom_smooth(method = "lm", se = FALSE) +
   geom_point(alpha = 1/4) +
-  geom_rug(alpha = 1/4, sides = "l") +
+  geom_rug(alpha = 1/4) +
   facet_grid(wave ~ intervention) +
   theme_bw() +
   theme(panel.grid.minor = element_blank(),
@@ -116,17 +116,17 @@ Check model simulation output.
 G <- 
   simResults %>%
   filter(group == "fixed") %>%
-  gather(variable, value, estimate, stdEstimate) %>%
+  gather(variable, value, estimate) %>%
   ggplot(aes(x = value)) +
   ggtitle("Distribution of fixed effects") +
   geom_density(aes(fill = term), alpha = 1/2) +
-  facet_grid(term ~ variable, scale = "free") +
+  facet_wrap(~ term, scale = "free_y", ncol = 1) +
   scale_fill_brewer("Model term", palette = "Set1") +
   theme_bw() +
   theme(legend.position = "none",
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simModelEstimateDensity.png", height = 6)
+ggsave("../figures/simModelEstimateDensity.png", width = 4, height = 6)
 G <- 
   simResults %>%
   filter(group == "wave") %>%
