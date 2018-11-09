@@ -15,7 +15,7 @@ The model is a random intercept model with subjects nested within wave.
 The model adjusts for baseline PSS score.
 
 $$
-y_\text{post} = \beta_{0j} + \beta_1 x_\text{MBSR1} + \beta_2 x_\text{MBSR2} + \beta_3 y_\text{baseline}
+y_\text{post} = \beta_{0j} + \beta_1 x_\text{MBSR} + \beta_2 y_\text{baseline}
 $$
 
 where $j = 1, \ldots, 6$ is the index for wave.
@@ -26,8 +26,6 @@ The amount of correlation between subjects within wave is the intraclass correla
 Correlation is also assumed between a subject's baseline and post-intervention stress level.
 For example, a person who doesn't get stressed is likely to not be under stress at both time points.
 The amount of correlation between time points within subject is the intraclass correlation set by `iccWithinSubject`, `r sprintf("%.00f%%", iccWithinSubject * 100)`.
-
-**Are these correlations reasonable?**
 
 Power simulations assume a study design with `r M` waves and `r N` subjects in randomized to each intervention arm in each wave.
 Simulations results are based on `r S` simulated data sets.
@@ -42,12 +40,9 @@ and a within subject correlation of `r sprintf("%.00f%%", iccWithinSubject * 100
 and a within wave correlation of `r sprintf("%.00f%%", iccWithinWave * 100)`, 
 there is
 
-* `r sprintf("%.03g%%", power %>% filter(term == "MBSR1") %>% pull(power) * 100)` 
+* `r sprintf("%.03g%%", power %>% filter(term == "MBSR") %>% pull(power) * 100)` 
   power to detect an effect size of 
-  `r sprintf("%.03g", power %>% filter(term == "MBSR1") %>% pull(nominalEffSize))`
-* `r sprintf("%.03g%%", power %>% filter(term == "MBSR2") %>% pull(power) * 100)` 
-  power to detect a standardized effect size of 
-  `r sprintf("%.03g", power %>% filter(term == "MBSR2") %>% pull(nominalEffSize))`
+  `r sprintf("%.03g", power %>% filter(term == "MBSR") %>% pull(nominalEffSize))`
 
 # Details
 
@@ -88,7 +83,7 @@ G <-
   theme(legend.position = "none",
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simDataDensities.png", height = 3)
+ggsave("../figures/simDataDensities.png", width = 5, height = 3)
 G <-
   df %>%
   filter(sim <= 10) %>%
@@ -102,7 +97,7 @@ G <-
   theme_bw() +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simCorrData.png", width = 5)
+ggsave("../figures/simCorrData.png", width = 4)
 ```
 
 ![figures/simDataDensities.png](figures/simDataDensities.png)

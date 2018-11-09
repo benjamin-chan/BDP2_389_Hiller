@@ -17,14 +17,14 @@ N <-    4  # Size in each wave
 S <- 5000  # Number of simulations
 design <-
   expand.grid(sim = seq(1, S),
-              intervention = c("Control", "MBSR1", "MBSR2"),
+              intervention = c("Control", "MBSR"),
               wave = seq(1, M)) %>%
   arrange(sim, intervention, wave)
 "2018-11-05" %>% as.Date %>% as.numeric %>% set.seed()
 
 # Define effect sizes, standard deviations, and within-cluster intraclass correlation.
-effsize <- c(0, 0.77, 0.91)
-sigma   <- rep(1, 3)
+effsize <- c(0, 0.77)
+sigma   <- rep(1, 2)
 iccWithinSubject <- 0.4
 iccWithinWave <- 0.05
 V1 <- matrix(c(1, iccWithinSubject, iccWithinSubject, 1), nrow = 2, ncol = 2)
@@ -81,8 +81,7 @@ simModel <- function (i, data = df) {
 
 # Simulate data.
 df <- bind_rows(simCorrData("Control", effsize[1], sigma[1]),
-                simCorrData("MBSR1"  , effsize[2], sigma[2]),
-                simCorrData("MBSR2"  , effsize[3], sigma[3]))
+                simCorrData("MBSR"   , effsize[2], sigma[2]))
 
 # Simulate power.
 cores <- min(4, detectCores())
@@ -106,8 +105,8 @@ power <-
             meanBeta = mean(estimate),
             sdBeta = sd(estimate)) %>%
   mutate(power = nReject / nSim) %>%
-  mutate(nominalEffSize = c(effsize[2:3], NA),
-         sigma = c(sigma[2:3], NA),
+  mutate(nominalEffSize = c(effsize[2], NA),
+         sigma = c(sigma[2], NA),
          iccWithinSubject = iccWithinSubject,
          iccWithinWave = iccWithinWave,
          groupSize = M * N) %>%
