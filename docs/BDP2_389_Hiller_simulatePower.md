@@ -1,7 +1,7 @@
 ---
 title: "BDP2-389 Hiller: Power and sample size simulation"
 author: "Benjamin Chan (chanb@ohsu.edu)"
-date: "2018-11-09 07:53:17"
+date: "2018-11-09 14:00:48"
 ---
 
 
@@ -16,7 +16,7 @@ The model is a random intercept model with subjects nested within wave.
 The model adjusts for baseline PSS score.
 
 $$
-y_\text{post} = \beta_{0j} + \beta_1 x_\text{MBSR1} + \beta_2 x_\text{MBSR2} + \beta_3 y_\text{baseline}
+y_\text{post} = \beta_{0j} + \beta_1 x_\text{MBSR} + \beta_2 y_\text{baseline}
 $$
 
 where $j = 1, \ldots, 6$ is the index for wave.
@@ -27,8 +27,6 @@ The amount of correlation between subjects within wave is the intraclass correla
 Correlation is also assumed between a subject's baseline and post-intervention stress level.
 For example, a person who doesn't get stressed is likely to not be under stress at both time points.
 The amount of correlation between time points within subject is the intraclass correlation set by `iccWithinSubject`, 40%.
-
-**Are these correlations reasonable?**
 
 Power simulations assume a study design with 6 waves and 4 subjects in randomized to each intervention arm in each wave.
 Simulations results are based on 5000 simulated data sets.
@@ -42,22 +40,18 @@ power %>% kable(digits = c(0, rep(3, 6), rep(0, 3), 3))
 
 |term      | nominalEffSize| sigma| meanBeta| sdBeta| iccWithinSubject| iccWithinWave| groupSize| nReject| nSim| power|
 |:---------|--------------:|-----:|--------:|------:|----------------:|-------------:|---------:|-------:|----:|-----:|
-|MBSR1     |           0.77|     1|    0.773|  0.287|              0.4|          0.05|        24|    4034| 5000| 0.807|
-|MBSR2     |           0.91|     1|    0.904|  0.285|              0.4|          0.05|        24|    4530| 5000| 0.906|
-|yBaseline |             NA|    NA|    0.400|  0.114|              0.4|          0.05|        24|    4669| 5000| 0.934|
+|MBSR      |           0.77|     1|    0.773|  0.288|              0.4|          0.05|        24|    3997| 5000| 0.799|
+|yBaseline |             NA|    NA|    0.398|  0.140|              0.4|          0.05|        24|    4080| 5000| 0.816|
 
 With a total of 24 subjects in each intervention arm 
-(72 subjects in total), 
+(48 subjects in total), 
 and a within subject correlation of 40% 
 and a within wave correlation of 5%, 
 there is
 
-* 80.7% 
+* 79.9% 
   power to detect an effect size of 
   0.77
-* 90.6% 
-  power to detect a standardized effect size of 
-  0.91
 
 # Details
 
@@ -123,8 +117,7 @@ df %>%
 |intervention | meanBaseline| sdBaseline| medianBaseline| minBaseline| maxBaseline|
 |:------------|------------:|----------:|--------------:|-----------:|-----------:|
 |Control      |         0.00|          1|              0|       -4.55|        4.43|
-|MBSR1        |        -0.01|          1|              0|       -4.29|        4.42|
-|MBSR2        |         0.00|          1|              0|       -4.50|        4.91|
+|MBSR         |        -0.01|          1|              0|       -4.29|        4.42|
 
 ```r
 cor(df %>% select(y0, y1)) %>% kable(digits = 4)
@@ -134,8 +127,8 @@ cor(df %>% select(y0, y1)) %>% kable(digits = 4)
 
 |   |     y0|     y1|
 |:--|------:|------:|
-|y0 | 1.0000| 0.3716|
-|y1 | 0.3716| 1.0000|
+|y0 | 1.0000| 0.3722|
+|y1 | 0.3722| 1.0000|
 
 
 ```r
@@ -151,7 +144,7 @@ G <-
   theme(legend.position = "none",
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simDataDensities.png", height = 3)
+ggsave("../figures/simDataDensities.png", width = 5, height = 3)
 G <-
   df %>%
   filter(sim <= 10) %>%
@@ -165,7 +158,7 @@ G <-
   theme_bw() +
   theme(panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-ggsave("../figures/simCorrData.png", width = 5)
+ggsave("../figures/simCorrData.png", width = 4)
 ```
 
 ![figures/simDataDensities.png](figures/simDataDensities.png)
