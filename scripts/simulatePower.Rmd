@@ -1,8 +1,6 @@
 ---
-title: |
-  | BDP2-389 Hiller
-  | Power and sample size simulation
-author: Benjamin Chan (chanb@ohsu.edu)
+title: "BDP2-389 Hiller: Power and sample size simulation"
+author: "Benjamin Chan (chanb@ohsu.edu)"
 date: "`r Sys.time()`"
 ---
 

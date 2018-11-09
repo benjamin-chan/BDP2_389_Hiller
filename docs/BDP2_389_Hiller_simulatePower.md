@@ -1,9 +1,7 @@
 ---
-title: |
-  | BDP2-389 Hiller
-  | Power and sample size simulation
-author: Benjamin Chan (chanb@ohsu.edu)
-date: "2018-11-07 21:04:47"
+title: "BDP2-389 Hiller: Power and sample size simulation"
+author: "Benjamin Chan (chanb@ohsu.edu)"
+date: "2018-11-09 07:53:17"
 ---
 
 
@@ -219,7 +217,7 @@ sessionInfo()
 ```
 ## R version 3.5.1 (2018-07-02)
 ## Platform: x86_64-w64-mingw32/x64 (64-bit)
-## Running under: Windows 10 x64 (build 17134)
+## Running under: Windows 7 x64 (build 7601) Service Pack 1
 ## 
 ## Matrix products: default
 ## 
@@ -238,14 +236,14 @@ sessionInfo()
 ##  [1] bindrcpp_0.2.2    doParallel_1.0.14 iterators_1.0.10 
 ##  [4] foreach_1.4.4     ggplot2_3.0.0     broom_0.5.0      
 ##  [7] lme4_1.1-18-1     Matrix_1.2-14     simstudy_0.1.10  
-## [10] data.table_1.11.6 dplyr_0.7.6       tidyr_0.8.1      
-## [13] magrittr_1.5      knitr_1.20        checkpoint_0.4.5 
+## [10] data.table_1.11.8 dplyr_0.7.6       tidyr_0.8.1      
+## [13] magrittr_1.5      knitr_1.20        checkpoint_0.4.3 
 ## 
 ## loaded via a namespace (and not attached):
 ##  [1] Rcpp_0.12.18       RColorBrewer_1.1-2 highr_0.7         
 ##  [4] plyr_1.8.4         pillar_1.3.0       compiler_3.5.1    
-##  [7] nloptr_1.0.4       bindr_0.1.1        tools_3.5.1       
-## [10] mvnfast_0.2.5      evaluate_0.12      tibble_1.4.2      
+##  [7] nloptr_1.2.1       bindr_0.1.1        tools_3.5.1       
+## [10] mvnfast_0.2.5      evaluate_0.11      tibble_1.4.2      
 ## [13] nlme_3.1-137       gtable_0.2.0       lattice_0.20-35   
 ## [16] pkgconfig_2.0.2    rlang_0.2.2        withr_2.1.2       
 ## [19] stringr_1.3.1      grid_3.5.1         tidyselect_0.2.4  
