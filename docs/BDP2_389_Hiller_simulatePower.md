@@ -1,7 +1,7 @@
 ---
 title: "BDP2-389 Hiller: Power and sample size simulation"
 author: "Benjamin Chan (chanb@ohsu.edu)"
-date: "2018-11-09 14:00:48"
+date: "2018-11-12 08:06:50"
 ---
 
 
@@ -40,7 +40,7 @@ power %>% kable(digits = c(0, rep(3, 6), rep(0, 3), 3))
 
 |term      | nominalEffSize| sigma| meanBeta| sdBeta| iccWithinSubject| iccWithinWave| groupSize| nReject| nSim| power|
 |:---------|--------------:|-----:|--------:|------:|----------------:|-------------:|---------:|-------:|----:|-----:|
-|MBSR      |           0.77|     1|    0.773|  0.288|              0.4|          0.05|        24|    3997| 5000| 0.799|
+|MBSR      |           0.78|     1|    0.783|  0.288|              0.4|          0.05|        24|    4044| 5000| 0.809|
 |yBaseline |             NA|    NA|    0.398|  0.140|              0.4|          0.05|        24|    4080| 5000| 0.816|
 
 With a total of 24 subjects in each intervention arm 
@@ -49,9 +49,9 @@ and a within subject correlation of 40%
 and a within wave correlation of 5%, 
 there is
 
-* 79.9% 
+* 80.9% 
   power to detect an effect size of 
-  0.77
+  0.78
 
 # Details
 
@@ -127,8 +127,8 @@ cor(df %>% select(y0, y1)) %>% kable(digits = 4)
 
 |   |     y0|     y1|
 |:--|------:|------:|
-|y0 | 1.0000| 0.3722|
-|y1 | 0.3722| 1.0000|
+|y0 | 1.0000| 0.3715|
+|y1 | 0.3715| 1.0000|
 
 
 ```r

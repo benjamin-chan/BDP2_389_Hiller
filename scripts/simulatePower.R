@@ -23,7 +23,7 @@ design <-
 "2018-11-05" %>% as.Date %>% as.numeric %>% set.seed()
 
 # Define effect sizes, standard deviations, and within-cluster intraclass correlation.
-effsize <- c(0, 0.77)
+effsize <- c(0, 0.78)
 sigma   <- rep(1, 2)
 iccWithinSubject <- 0.4
 iccWithinWave <- 0.05
